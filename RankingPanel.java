@@ -6,15 +6,18 @@ import java.io.IOException;
 import javax.swing.*;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Set;
 class RankingPanel extends JPanel {
     RankingPanel(JFrame frame) {
         this.setPreferredSize(new Dimension(GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT));
         this.setBackground(Color.black);
         this.setLayout(new BorderLayout());
 
-        JLabel title = new JLabel("All Scores", SwingConstants.CENTER);
+        JLabel title = new JLabel("Leaderboard", SwingConstants.CENTER);
         title.setFont(new Font("Ink Free", Font.BOLD, 50));
         title.setForeground(Color.white);
         this.add(title, BorderLayout.NORTH);
@@ -25,15 +28,12 @@ class RankingPanel extends JPanel {
         rankingArea.setForeground(Color.white);
         rankingArea.setFont(new Font("Ink Free", Font.PLAIN, 20));
 
-        StringBuilder rankingText = new StringBuilder();
-        List<Integer> scores = loadScores();
-        for (int i = 0; i < scores.size(); i++) {
-            rankingText.append((i + 1) + ". " + scores.get(i) + "\n");
-        }
-        rankingArea.setText(rankingText.toString());
+        List<String> scores = loadScores();
+        scores = getTopScores(scores, 10); // Limit to top 10 scores
+        scores.forEach(score -> rankingArea.append(score + "\n"));
         this.add(new JScrollPane(rankingArea), BorderLayout.CENTER);
 
-        JButton backButton = new JButton("Back to Menu");
+        JButton backButton = new JButton("Back");
         backButton.setFont(new Font("Ink Free", Font.BOLD, 30));
         backButton.addActionListener(e -> {
             frame.setContentPane(new MenuPanel(frame));
@@ -42,17 +42,42 @@ class RankingPanel extends JPanel {
         this.add(backButton, BorderLayout.SOUTH);
     }
 
-    private List<Integer> loadScores() {
-        List<Integer> scores = new ArrayList<>();
+    private List<String> loadScores() {
+        Set<String> uniqueScores = new HashSet<>();
+        List<String> scores = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader("ranking.txt"))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                scores.add(Integer.parseInt(line));
+                if (uniqueScores.add(line)) { // Prevent duplicates
+                    scores.add(line);
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error reading ranking file: " + e.getMessage());
         }
-        scores.sort(Collections.reverseOrder());
         return scores;
     }
+
+    private List<String> getTopScores(List<String> scores, int limit) {
+    PriorityQueue<Integer> topScores = new PriorityQueue<>(Comparator.reverseOrder()); 
+    scores.forEach(score -> {
+        try {
+            int value = Integer.parseInt(score.split(":")[1].trim());
+            topScores.add(value);
+            if (topScores.size() > limit) {
+                topScores.poll();
+            }
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            System.err.println("Invalid score entry: " + score);
+        }
+    });
+    
+    List<String> result = new ArrayList<>();
+    int rank = 1;
+    while (!topScores.isEmpty()) {
+        result.add(rank++ + ". Score: " + topScores.poll());
+    }
+    return result;
+}
+
 }
