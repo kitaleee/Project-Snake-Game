@@ -1,6 +1,6 @@
 International University - HCM University.
 
-Algorithms & Data Structures 2024.
+Algorithms & Data Structures 2025.
 
 Project Snake Game.
 
